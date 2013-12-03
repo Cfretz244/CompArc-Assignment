@@ -88,8 +88,8 @@ int validateParameters(char **argv) {
         printf("ERROR: Numbers must be powers of two\n");
         error = 1;
     }
-    if(error) {
-        return -1;
+    if(!error) {
+        return 1;
     } else {
         return 0;
     }
@@ -103,8 +103,14 @@ int main(int argc, char **argv) {
             printf("ERROR: Invalid Arguments\n");
         }
     } else if(argc == 16) {
-        if(validateParameters(argv) != -1) {
+        if(validateParameters(argv)) {
             printf("Validated\n");
+            FILE *file = fopen((char *)arguments[8], "r");
+            if(file) {
+                printf("File Opened\n");
+            } else {
+                printf("ERROR: File does not exist\n");
+            }
         } else {
             printf("Failed\n");
         }
