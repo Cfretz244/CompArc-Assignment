@@ -1,4 +1,10 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "sim.h"
+#include "SmrtArr.h"
+
+#define startingLineLength 8
 
 void *arguments[9];
 
@@ -95,6 +101,33 @@ int validateParameters(char **argv) {
     }
 }
 
+SmrtArr* getLines(FILE *file) {
+    int byteData = 0;
+    SmrtArr *allLines = createSmrtArr();
+
+    while(byteData != EOF) {
+        int innerCounter;
+        char *currentLine = malloc(sizeof(char) * startingLineLength);
+        int currentSize = startingLineLength;
+        byteData = 0;
+        for(innerCounter = 0; byteData != EOF && byteData != '\n'; innerCounter++) {
+            byteData = fgetc(file);
+            if(byteData != EOF && byteData != '\n') {
+                currentLine[innerCounter] = (char)byteData;
+            }
+            if(innerCounter >= currentSize) {
+                currentSize *= 2;
+                currentLine = realloc(currentLine, sizeof(char) * currentSize);
+            }
+        }
+        currentLine[innerCounter] = '\0';
+        if(strcmp(currentLine, "") != 0 && strcmp(currentLine, "#eof") != 0) {
+            insertElement(allLines, currentLine);
+        }
+    }
+    return allLines;
+}
+
 int main(int argc, char **argv) {
     if(argc == 2) {
         if(strcmp("-h", argv[1]) == 0) {
@@ -108,6 +141,12 @@ int main(int argc, char **argv) {
             FILE *file = fopen((char *)arguments[8], "r");
             if(file) {
                 printf("File Opened\n");
+                SmrtArr *lines = getLines(file);
+                printf("File read\n");
+                int i;
+                for(i = 0; i < lines->elemsHeld; i++) {
+                    printf("%s\n", lines->contents[i]);
+                }
             } else {
                 printf("ERROR: File does not exist\n");
             }
