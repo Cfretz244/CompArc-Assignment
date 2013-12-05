@@ -2,11 +2,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include "sim.h"
-#include "SmrtArr.h"
 
 #define startingLineLength 8
 
-void *arguments[9];
+int intArgs[7];
+char *replaceAlg;
+char *traceFile;
+Cache *l1Cache, *l2Cache, *l3Cache;
 
 int isPowerOfTwo(int check) {
     while((check % 2 == 0) && check > 1) {
@@ -22,9 +24,8 @@ int validateParameters(char **argv) {
     for(i = 1; i < 16; i++) {
         char *currentStr = argv[i];
         if(strcmp("-l1size", currentStr) == 0) {
-            if(strtol(argv[i + 1], NULL, 10) != 0) {
-                int tmp = atoi(argv[i + 1]);
-                arguments[0] = &tmp;
+            if(strtol(argv[i + 1], NULL, 10)) {
+                intArgs[0] = atoi(argv[i + 1]);
             } else {
                 printf("ERROR: Invalid L1 Size\n");
                 error = 1;
@@ -32,17 +33,20 @@ int validateParameters(char **argv) {
             i++;
         } else if(strcmp("-l1assoc", currentStr) == 0) {
             char *nextStr = argv[i + 1];
-            if(strcmp("direct", nextStr) == 0 || strcmp("assoc", nextStr) == 0 || strcmp("assoc:n", nextStr) == 0) {
-                arguments[1] = nextStr;
+            if(strcmp("direct", nextStr) == 0) {
+                intArgs[1] = 1;
+            } else if(strcmp("assoc", nextStr) == 0) {
+                intArgs[1] = 0;
+            } else if(strstr(nextStr, "assoc:") != NULL) {
+                intArgs[1] = atoi(&nextStr[6]);
             } else {
                 printf("ERROR: Invalid L1 Association Type\n");
                 error = 1;
             }
             i++;
         } else if(strcmp("-l2size", currentStr) == 0) {
-            if(strtol(argv[i + 1], NULL, 10) != 0) {
-                int tmp = atoi(argv[i + 1]);
-                arguments[2] = &tmp;
+            if(strtol(argv[i + 1], NULL, 10)) {
+                intArgs[2] = atoi(argv[i + 1]);
             } else {
                 printf("ERROR: Invalid L2 Size\n");
                 error = 1;
@@ -50,17 +54,20 @@ int validateParameters(char **argv) {
             i++;
         } else if(strcmp("-l2assoc", currentStr) == 0) {
             char *nextStr = argv[i + 1];
-            if(strcmp("direct", nextStr) == 0 || strcmp("assoc", nextStr) == 0 || strcmp("assoc:n", nextStr) == 0) {
-                arguments[3] = nextStr;
+            if(strcmp("direct", nextStr) == 0) {
+                intArgs[3] = 1;
+            } else if(strcmp("assoc", nextStr) == 0) {
+                intArgs[3] = 0;
+            } else if(strstr(nextStr, "assoc:") != NULL) {
+                intArgs[3] = atoi(&nextStr[6]);
             } else {
                 printf("ERROR: Invalid L2 Association Type\n");
                 error = 1;
             }
             i++;
         } else if(strcmp("-l3size", currentStr) == 0) {
-            if(strtol(argv[i + 1], NULL, 10) != 0) {
-                int tmp = atoi(argv[i + 1]);
-                arguments[4] = &tmp;
+            if(strtol(argv[i + 1], NULL, 10)) {
+                intArgs[4] = atoi(argv[i + 1]);
             } else {
                 printf("ERROR: Invalid L3 Size\n");
                 error = 1;
@@ -68,21 +75,24 @@ int validateParameters(char **argv) {
             i++;
         } else if(strcmp("-l3assoc", currentStr) == 0) {
             char *nextStr = argv[i + 1];
-            if(strcmp("direct", nextStr) == 0 || strcmp("assoc", nextStr) == 0 || strcmp("assoc:n", nextStr) == 0) {
-                arguments[5] = nextStr;
+            if(strcmp("direct", nextStr) == 0) {
+                intArgs[5] = 1;
+            } else if(strcmp("assoc", nextStr) == 0) {
+                intArgs[5] = 0;
+            } else if(strstr(nextStr, "assoc:") != NULL) {
+                intArgs[5] = atoi(&nextStr[6]);
             } else {
                 printf("ERROR: Invalid L3 Association Type\n");
                 error = 1;
             }
             i++;
         } else if(strcmp("FIFO", currentStr) == 0 || strcmp("LRU", currentStr) == 0) {
-            arguments[6] = currentStr;
-        } else if(strtol(currentStr, NULL, 10) != 0) {
-            int tmp = atoi(currentStr);
-            arguments[7] = &tmp;
+            replaceAlg = currentStr;
+        } else if(strtol(currentStr, NULL, 10)) {
+            intArgs[7] = atoi(currentStr);
         } else {
             if(shouldAbsorb) {
-                arguments[8] = currentStr;
+                traceFile = currentStr;
                 shouldAbsorb = 0;
             } else {
                 printf("ERROR: Invalid Parameters\n");
@@ -90,9 +100,27 @@ int validateParameters(char **argv) {
             }
         }
     }
-    if(!isPowerOfTwo(*(int *)arguments[0]) || !isPowerOfTwo(*(int *)arguments[2]) || !isPowerOfTwo(*(int *)arguments[4]) || !isPowerOfTwo(*(int *)arguments[7]) ) {
+    if(!isPowerOfTwo(intArgs[0]) || !isPowerOfTwo(intArgs[2]) || !isPowerOfTwo(intArgs[4]) || !isPowerOfTwo(intArgs[7]) ) {
         printf("ERROR: Numbers must be powers of two\n");
         error = 1;
+    }
+    if(intArgs[1] == 0) {
+        int cacheSize = intArgs[0];
+        int blockSize = intArgs[7];
+        int assoc = cacheSize / blockSize;
+        intArgs[1] = assoc;
+    }
+    if(intArgs[3] == 0) {
+        int cacheSize = intArgs[2];
+        int blockSize = intArgs[7];
+        int assoc = cacheSize / blockSize;
+        intArgs[3] = assoc;
+    }
+    if(intArgs[5] == 0) {
+        int cacheSize = intArgs[4];
+        int blockSize = intArgs[7];
+        int assoc = cacheSize / blockSize;
+        intArgs[5] = assoc;
     }
     if(!error) {
         return 1;
@@ -101,7 +129,7 @@ int validateParameters(char **argv) {
     }
 }
 
-SmrtArr* getLines(FILE *file) {
+SmrtArr *getLines(FILE *file) {
     int byteData = 0;
     SmrtArr *allLines = createSmrtArr();
 
@@ -128,6 +156,58 @@ SmrtArr* getLines(FILE *file) {
     return allLines;
 }
 
+Line *createLine() {
+    Line *line = malloc(sizeof(Line));
+    line->validBit = 0;
+    line->tag = 0;
+    return line;
+}
+
+void destroyLine(Line *line) {
+    free(line);
+}
+
+Set *createSet(int numLines) {
+    Set *set = malloc(sizeof(Set));
+    set->numLines = numLines;
+    set->lines = malloc(sizeof(Line *) * numLines);
+    int i;
+    for(i = 0; i < numLines; i++) {
+        set->lines[i] = createLine();
+    }
+    return set;
+}
+
+void destroySet(Set *set) {
+    int i;
+    for(i = 0; i < set->numLines; i++) {
+        destroyLine(set->lines[i]);
+    }
+    free(set);
+}
+
+Cache *createCache(int size, int association, int blockSize, int numSets) {
+    Cache *cache = malloc(sizeof(Cache));
+    cache->size = size;
+    cache->association = association;
+    cache->blockSize = blockSize;
+    cache->numSets = numSets;
+    cache->storage = malloc(sizeof(Set *) * numSets);
+    int i;
+    for(i = 0; i < numSets; i++) {
+        cache->storage[i] = createSet(association);
+    }
+    return cache;
+}
+
+void destroyCache(Cache *cache) {
+    int i;
+    for(i = 0; i < cache->numSets; i++) {
+        destroySet(cache->storage[i]);
+    }
+    free(cache);
+}
+
 int main(int argc, char **argv) {
     if(argc == 2) {
         if(strcmp("-h", argv[1]) == 0) {
@@ -137,21 +217,30 @@ int main(int argc, char **argv) {
         }
     } else if(argc == 16) {
         if(validateParameters(argv)) {
-            printf("Validated\n");
-            FILE *file = fopen((char *)arguments[8], "r");
+            FILE *file = fopen(traceFile, "r");
             if(file) {
-                printf("File Opened\n");
                 SmrtArr *lines = getLines(file);
-                printf("File read\n");
-                int i;
-                for(i = 0; i < lines->elemsHeld; i++) {
-                    printf("%s\n", lines->contents[i]);
-                }
+                int size = intArgs[0];
+                int assoc = intArgs[1];
+                int blockSize = intArgs[7];
+                int numSets = size / (assoc * blockSize);
+                l1Cache = createCache(size, assoc, blockSize, numSets);
+                printf("L1 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l1Cache->size, l1Cache->numSets, l1Cache->blockSize);
+                size = intArgs[2];
+                assoc = intArgs[3];
+                numSets = size / (assoc * blockSize);
+                l2Cache = createCache(size, assoc, blockSize, numSets);
+                printf("L2 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l2Cache->size, l2Cache->numSets, l2Cache->blockSize);
+                size = intArgs[4];
+                assoc = intArgs[5];
+                numSets = size / (assoc * blockSize);
+                l3Cache = createCache(size, assoc, blockSize, numSets);
+                printf("L3 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l3Cache->size, l3Cache->numSets, l3Cache->blockSize);
             } else {
                 printf("ERROR: File does not exist\n");
             }
         } else {
-            printf("Failed\n");
+            return 1;
         }
     } else if(argc == 17) {
         if(strcmp("-h", argv[1]) == 0) {
