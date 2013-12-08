@@ -6,7 +6,8 @@
 
 #define startingLineLength 8
 
-int intArgs[7];
+int intArgs[8];
+int coldMiss, conflictMiss, capacityMiss;
 char *replaceAlg;
 char *traceFile;
 Cache *l1Cache, *l2Cache, *l3Cache;
@@ -182,7 +183,7 @@ SmrtArr *getLines(FILE *file) {
 }
 
 long long int *bitHash(long long int currentElem) {
-    long long int *hashes = malloc(sizeof(int) * 9);
+    long long int *hashes = malloc(sizeof(long long int) * 9);
     int l1BlockBits = whatPowerOfTwo(l1Cache->blockSize);
     int l2BlockBits = whatPowerOfTwo(l2Cache->blockSize);
     int l3BlockBits = whatPowerOfTwo(l3Cache->blockSize);
@@ -205,7 +206,6 @@ void insertionLoop(SmrtArr *arr) {
     int i;
     for(i = 0; i < arr->elemsHeld; i++) {
         long long int *hashes = bitHash(arr->contents[i]);
-        int something = 5;
     }
 }
 
@@ -218,6 +218,9 @@ int main(int argc, char **argv) {
         }
     } else if(argc == 16) {
         if(validateParameters(argv)) {
+            coldMiss = 0;
+            capacityMiss = 0;
+            conflictMiss = 0;
             FILE *file = fopen(traceFile, "r");
             if(file) {
                 SmrtArr *lines = getLines(file);
