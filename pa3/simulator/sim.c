@@ -148,13 +148,14 @@ int validateParameters(char **argv) {
 }
 
 SmrtArr *getLines(FILE *file) {
-    int byteData = 0, shouldRun = 0;
+    int byteData = 0, shouldRun = 0, validData = 1;
     SmrtArr *allLines = createSmrtArr();
 
     while(byteData != EOF) {
         long long int currentLine = 0;
         byteData = 0;
         shouldRun = 0;
+        validData = 1;
         while(byteData != EOF && byteData != '\n') {
             byteData = fgetc(file);
             if(byteData != EOF && byteData != '\n' && shouldRun) {
@@ -165,12 +166,15 @@ SmrtArr *getLines(FILE *file) {
                 } else if(currentChar >= '0' && currentChar <= '9') {
                     currentLine += currentChar - 48;
                 } else if(currentChar != 'x') {
-                    continue;
+                    validData = 0;
+                    break;
                 }
             }
-            shouldRun = 1;
+            if(!shouldRun) {
+                shouldRun = 1;
+            }
         }
-        if(currentLine > 0) {
+        if(currentLine > 0 && validData) {
             insertElement(allLines, currentLine);
         }
     }
