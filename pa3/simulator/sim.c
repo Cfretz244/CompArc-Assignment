@@ -1,3 +1,4 @@
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,6 +16,23 @@ int isPowerOfTwo(int check) {
         check /=2;
     }
     return (check == 1);
+}
+
+int whatPowerOfTwo(int check) {
+    int i;
+    for(i = 0; check % 2 == 0; i++) {
+        check /= 2;
+    }
+    return i;
+}
+
+int nextPowerOfTwo(long long int check) {
+    int i;
+    long long int powers = 1;
+    for(i = 0; check > powers; i++) {
+        powers *= 2;
+    }
+    return i;
 }
 
 int validateParameters(char **argv) {
@@ -208,6 +226,29 @@ void destroyCache(Cache *cache) {
     free(cache);
 }
 
+void insertionLoop(SmrtArr *arr) {
+    int i;
+    for(i = 0; i < arr->elemsHeld; i++) {
+        long long int currentElem = strtoll(arr->contents[i], NULL, 0);
+        int l1BlockBits = whatPowerOfTwo(l1Cache->blockSize);
+        int l2BlockBits = whatPowerOfTwo(l2Cache->blockSize);
+        int l3BlockBits = whatPowerOfTwo(l3Cache->blockSize);
+        int l1SetBits = whatPowerOfTwo(l1Cache->numSets);
+        int l2SetBits = whatPowerOfTwo(l2Cache->numSets);
+        int l3SetBits = whatPowerOfTwo(l3Cache->numSets);
+        int l1BlockOffset = (currentElem) & ~(~0 << (l1BlockBits));
+        int l1SetOffset = (currentElem >> (l1BlockBits)) & ~(~0 << (l1SetBits));
+        long long int l1Tag = (currentElem >> (l1BlockBits + l1SetBits));
+        int l2BlockOffset = (currentElem) & ~(~0 << (l2BlockBits));
+        int l2SetOffset = (currentElem >> (l2BlockBits)) & ~(~0 << (l2SetBits));
+        long long int l2Tag = (currentElem >> (l2BlockBits + l2SetBits));
+        int l3BlockOffset = (currentElem) & ~(~0 << (l3BlockBits));
+        int l3SetOffset = (currentElem >> (l3BlockBits)) & ~(~0 << (l3SetBits));
+        long long int l3Tag = (currentElem >> (l3BlockBits + l3SetBits));
+        int something = 5;
+    }
+}
+
 int main(int argc, char **argv) {
     if(argc == 2) {
         if(strcmp("-h", argv[1]) == 0) {
@@ -236,6 +277,7 @@ int main(int argc, char **argv) {
                 numSets = size / (assoc * blockSize);
                 l3Cache = createCache(size, assoc, blockSize, numSets);
                 printf("L3 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l3Cache->size, l3Cache->numSets, l3Cache->blockSize);
+                insertionLoop(lines);
             } else {
                 printf("ERROR: File does not exist\n");
             }
