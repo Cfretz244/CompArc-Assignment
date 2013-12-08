@@ -1,8 +1,8 @@
-#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "sim.h"
+#include "Cache.h"
 
 #define startingLineLength 8
 
@@ -148,103 +148,59 @@ int validateParameters(char **argv) {
 }
 
 SmrtArr *getLines(FILE *file) {
-    int byteData = 0;
+    int byteData = 0, shouldRun = 0;
     SmrtArr *allLines = createSmrtArr();
 
     while(byteData != EOF) {
-        int innerCounter;
-        char *currentLine = malloc(sizeof(char) * startingLineLength);
-        int currentSize = startingLineLength;
+        long long int currentLine = 0;
         byteData = 0;
-        for(innerCounter = 0; byteData != EOF && byteData != '\n'; innerCounter++) {
+        shouldRun = 0;
+        while(byteData != EOF && byteData != '\n') {
             byteData = fgetc(file);
-            if(byteData != EOF && byteData != '\n') {
-                currentLine[innerCounter] = (char)byteData;
+            if(byteData != EOF && byteData != '\n' && shouldRun) {
+                char currentChar = (char)byteData;
+                currentLine *= 16;
+                if(currentChar >= 'a' && currentChar <= 'f') {
+                    currentLine += currentChar - 87;
+                } else if(currentChar >= '0' && currentChar <= '9') {
+                    currentLine += currentChar - 48;
+                } else if(currentChar != 'x') {
+                    continue;
+                }
             }
-            if(innerCounter >= currentSize) {
-                currentSize *= 2;
-                currentLine = realloc(currentLine, sizeof(char) * currentSize);
-            }
+            shouldRun = 1;
         }
-        currentLine[innerCounter] = '\0';
-        if(strcmp(currentLine, "") != 0 && strcmp(currentLine, "#eof") != 0) {
+        if(currentLine > 0) {
             insertElement(allLines, currentLine);
         }
     }
     return allLines;
 }
 
-Line *createLine() {
-    Line *line = malloc(sizeof(Line));
-    line->validBit = 0;
-    line->tag = 0;
-    return line;
-}
-
-void destroyLine(Line *line) {
-    free(line);
-}
-
-Set *createSet(int numLines) {
-    Set *set = malloc(sizeof(Set));
-    set->numLines = numLines;
-    set->lines = malloc(sizeof(Line *) * numLines);
-    int i;
-    for(i = 0; i < numLines; i++) {
-        set->lines[i] = createLine();
-    }
-    return set;
-}
-
-void destroySet(Set *set) {
-    int i;
-    for(i = 0; i < set->numLines; i++) {
-        destroyLine(set->lines[i]);
-    }
-    free(set);
-}
-
-Cache *createCache(int size, int association, int blockSize, int numSets) {
-    Cache *cache = malloc(sizeof(Cache));
-    cache->size = size;
-    cache->association = association;
-    cache->blockSize = blockSize;
-    cache->numSets = numSets;
-    cache->storage = malloc(sizeof(Set *) * numSets);
-    int i;
-    for(i = 0; i < numSets; i++) {
-        cache->storage[i] = createSet(association);
-    }
-    return cache;
-}
-
-void destroyCache(Cache *cache) {
-    int i;
-    for(i = 0; i < cache->numSets; i++) {
-        destroySet(cache->storage[i]);
-    }
-    free(cache);
+long long int *bitHash(long long int currentElem) {
+    long long int *hashes = malloc(sizeof(int) * 9);
+    int l1BlockBits = whatPowerOfTwo(l1Cache->blockSize);
+    int l2BlockBits = whatPowerOfTwo(l2Cache->blockSize);
+    int l3BlockBits = whatPowerOfTwo(l3Cache->blockSize);
+    int l1SetBits = whatPowerOfTwo(l1Cache->numSets);
+    int l2SetBits = whatPowerOfTwo(l2Cache->numSets);
+    int l3SetBits = whatPowerOfTwo(l3Cache->numSets);
+    hashes[0] = (currentElem) & ~(~0 << (l1BlockBits));
+    hashes[1] = (currentElem >> (l1BlockBits)) & ~(~0 << (l1SetBits));
+    hashes[2] = (currentElem >> (l1BlockBits + l1SetBits));
+    hashes[3] = (currentElem) & ~(~0 << (l2BlockBits));
+    hashes[4] = (currentElem >> (l2BlockBits)) & ~(~0 << (l2SetBits));
+    hashes[5] = (currentElem >> (l2BlockBits + l2SetBits));
+    hashes[6] = (currentElem) & ~(~0 << (l3BlockBits));
+    hashes[7] = (currentElem >> (l3BlockBits)) & ~(~0 << (l3SetBits));
+    hashes[8] = (currentElem >> (l3BlockBits + l3SetBits));
+    return hashes;
 }
 
 void insertionLoop(SmrtArr *arr) {
     int i;
     for(i = 0; i < arr->elemsHeld; i++) {
-        long long int currentElem = strtoll(arr->contents[i], NULL, 0);
-        int l1BlockBits = whatPowerOfTwo(l1Cache->blockSize);
-        int l2BlockBits = whatPowerOfTwo(l2Cache->blockSize);
-        int l3BlockBits = whatPowerOfTwo(l3Cache->blockSize);
-        int l1SetBits = whatPowerOfTwo(l1Cache->numSets);
-        int l2SetBits = whatPowerOfTwo(l2Cache->numSets);
-        int l3SetBits = whatPowerOfTwo(l3Cache->numSets);
-        int l1BlockOffset = (currentElem) & ~(~0 << (l1BlockBits));
-        int l1SetOffset = (currentElem >> (l1BlockBits)) & ~(~0 << (l1SetBits));
-        long long int l1Tag = (currentElem >> (l1BlockBits + l1SetBits));
-        int l2BlockOffset = (currentElem) & ~(~0 << (l2BlockBits));
-        int l2SetOffset = (currentElem >> (l2BlockBits)) & ~(~0 << (l2SetBits));
-        long long int l2Tag = (currentElem >> (l2BlockBits + l2SetBits));
-        int l3BlockOffset = (currentElem) & ~(~0 << (l3BlockBits));
-        int l3SetOffset = (currentElem >> (l3BlockBits)) & ~(~0 << (l3SetBits));
-        long long int l3Tag = (currentElem >> (l3BlockBits + l3SetBits));
+        long long int *hashes = bitHash(arr->contents[i]);
         int something = 5;
     }
 }
