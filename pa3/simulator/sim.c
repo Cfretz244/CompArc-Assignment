@@ -10,6 +10,7 @@
 int intArgs[8];
 int l1Misses, l2Misses, l3Misses;
 int l1Hits, l2Hits, l3Hits;
+int memAccesses;
 char *replaceAlg;
 char *traceFile;
 Cache *l1Cache, *l2Cache, *l3Cache;
@@ -107,7 +108,7 @@ int validateParameters(char **argv) {
                 error = 1;
             }
             i++;
-        } else if(strcmp("FIFO", currentStr) == 0 || strcmp("LRU", currentStr) == 0) {
+        } else if(strcmp("FIFO", currentStr) == 0 || strcmp("LRU", currentStr) == 0 || strcmp("lru", currentStr) == 0 || strcmp("fifo", currentStr) == 0) {
             replaceAlg = currentStr;
         } else if(strtol(currentStr, NULL, 10)) {
             intArgs[7] = atoi(currentStr);
@@ -142,6 +143,10 @@ int validateParameters(char **argv) {
         int blockSize = intArgs[7];
         int assoc = cacheSize / blockSize;
         intArgs[5] = assoc;
+    }
+    if((intArgs[0] < intArgs[1] * intArgs[7]) || (intArgs[2] < intArgs[3] * intArgs[7]) || (intArgs[4] < intArgs[5] * intArgs[7])) {
+        printf("ERROR: Check those numbers\n");
+        error = 1;
     }
     if(!error) {
         return 1;
@@ -284,15 +289,22 @@ int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int s
 void insertionLoop(SmrtArr *arr) {
     int i;
     for(i = 0; i < arr->elemsHeld; i++) {
+        int hit = 0;
         long long int *hashes = bitHash(arr->contents[i]);
         if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2], arr->contents[i])) {
             l1Hits++;
+            hit = 1;
         }
         if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5], arr->contents[i])) {
             l2Hits++;
+            hit = 1;
         }
         if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
             l3Hits++;
+            hit = 1;
+        }
+        if(!hit) {
+            memAccesses++;
         }
     }
 }
@@ -314,27 +326,29 @@ int main(int argc, char **argv) {
                 l1Hits = 0;
                 l2Hits = 0;
                 l3Hits = 0;
+                memAccesses = 0;
                 SmrtArr *lines = getLines(file);
                 int size = intArgs[0];
                 int assoc = intArgs[1];
                 int blockSize = intArgs[7];
                 int numSets = size / (assoc * blockSize);
                 l1Cache = createCache(1, size, assoc, blockSize, numSets);
-                printf("L1 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l1Cache->size, l1Cache->numSets, l1Cache->storage[0]->numLines, l1Cache->blockSize);
                 size = intArgs[2];
                 assoc = intArgs[3];
                 numSets = size / (assoc * blockSize);
                 l2Cache = createCache(2, size, assoc, blockSize, numSets);
-                printf("L2 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l2Cache->size, l2Cache->numSets, l2Cache->storage[0]->numLines, l2Cache->blockSize);
                 size = intArgs[4];
                 assoc = intArgs[5];
                 numSets = size / (assoc * blockSize);
                 l3Cache = createCache(3, size, assoc, blockSize, numSets);
-                printf("L3 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l3Cache->size, l3Cache->numSets, l3Cache->storage[0]->numLines, l3Cache->blockSize);
                 insertionLoop(lines);
-                printf("There were %d L1 hits and %d L1 misses for a percentage of %f\n", l1Hits, l1Misses, (((l1Hits) / (l1Hits + (float)l1Misses)) * 100));
-                printf("There were %d L2 hits and %d L2 misses for a percentage of %f\n", l2Hits, l2Misses, (((l2Hits) / (l2Hits + (float)l2Misses)) * 100));
-                printf("There were %d L3 hits and %d L3 misses for a percentage of %f\n", l3Hits, l3Misses, (((l3Hits) / (l3Hits + (float)l3Misses)) * 100));
+                printf("Memory Accesses: %d\n", memAccesses);
+                printf("L1 Cache Hits: %d\n" ,l1Hits);
+                printf("L1 Cache Miss: %d\n", l1Misses);
+                printf("L2 Cache Hits: %d\n", l2Hits);
+                printf("L2 Cache Miss: %d\n", l2Misses);
+                printf("L3 Cache Hits: %d\n", l3Hits);
+                printf("L3 Cache Hits: %d\n", l3Misses);
             } else {
                 printf("ERROR: File does not exist\n");
             }
