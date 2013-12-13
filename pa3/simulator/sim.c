@@ -153,7 +153,7 @@ SmrtArr *getLines(FILE *file) {
     SmrtArr *allLines = createSmrtArr();
 
     while(byteData != EOF) {
-        long long int currentLine = 0;
+        unsigned long long int currentLine = 0;
         byteData = 0;
         shouldRun = 0;
         validData = 1;
@@ -177,13 +177,15 @@ SmrtArr *getLines(FILE *file) {
         }
         if(currentLine > 0 && validData) {
             insertElement(allLines, currentLine);
+        } else {
+            printf("We have a problem\n");
         }
     }
     return allLines;
 }
 
-long long int *bitHash(long long int currentElem) {
-    long long int *hashes = malloc(sizeof(long long int) * 9);
+unsigned long long int *bitHash(unsigned long long int currentElem) {
+    unsigned long long int *hashes = malloc(sizeof(unsigned long long int) * 9);
     int l1BlockBits = whatPowerOfTwo(l1Cache->blockSize);
     int l2BlockBits = whatPowerOfTwo(l2Cache->blockSize);
     int l3BlockBits = whatPowerOfTwo(l3Cache->blockSize);
@@ -215,7 +217,7 @@ void updateLines(Line **lines, int lineCount, int index, int wasInserted) {
     }
 }
 
-int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int setOffset, long long int tag, long long int fullNum) {
+int checkAndUpdateCache(Cache *cache, unsigned long long int blockOffset, unsigned long long int setOffset, unsigned long long int tag, unsigned long long int fullNum) {
     Set *currSet = cache->storage[setOffset];
     Line **lines = currSet->lines;
     int i, validCount = 0;
@@ -293,7 +295,7 @@ void insertionLoop(SmrtArr *arr) {
     memAccesses = arr->elemsHeld;
     for(i = 0; i < arr->elemsHeld; i++) {
         int hit = 0;
-        long long int *hashes = bitHash(arr->contents[i]);
+        unsigned long long int *hashes = bitHash(arr->contents[i]);
         if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2], arr->contents[i])) {
             l1Hits++;
             hit = 1;
@@ -307,8 +309,8 @@ void insertionLoop(SmrtArr *arr) {
     }
 }
 
-long long int *secondaryBitHash(long long int currentElem, Cache *assocCache) {
-    long long int *hashes = malloc(sizeof(long long int) * 3);
+unsigned long long int *secondaryBitHash(unsigned long long int currentElem, Cache *assocCache) {
+    unsigned long long int *hashes = malloc(sizeof(unsigned long long int) * 3);
     int assocBlockBits = whatPowerOfTwo(assocCache->blockSize);
     int assocSetBits = whatPowerOfTwo(assocCache->numSets);
     hashes[0] = (currentElem) & ~(~0 << (assocBlockBits));
@@ -320,7 +322,7 @@ long long int *secondaryBitHash(long long int currentElem, Cache *assocCache) {
 void secondaryInsertionLoop(Cache *assocCache, SmrtArr *arr) {
     int i;
     for(i = 0; i < arr->elemsHeld; i++) {
-        long long int *hashes = secondaryBitHash(arr->contents[i], assocCache);
+        unsigned long long int *hashes = secondaryBitHash(arr->contents[i], assocCache);
         checkAndUpdateCache(assocCache, hashes[0], hashes[1], hashes[2], arr->contents[i]);
     }
 }

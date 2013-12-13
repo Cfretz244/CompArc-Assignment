@@ -3,7 +3,7 @@ typedef struct Line {
     int insertionAge;
     int usageAge;
     int validBit;
-    long long int tag;
+    unsigned long long int tag;
 } Line;
 
 //Struct represents a single set inside of a Cache

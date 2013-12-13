@@ -16,20 +16,20 @@ int validateParameters(char **argv);
 SmrtArr *getLines(FILE *file);
 
 //Function handles all bit shifting necessary to hash addresses into the cache
-long long int *bitHash(long long int currentElem);
+unsigned long long int *bitHash(unsigned long long int currentElem);
 
 //Function keeps track of when addresses were inserted, and when they were last used
 void updateLines(Line **lines, int lineCount, int index, int wasInserted);
 
 //Function handles the majority of logic related to inserting an address into the cache
-int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int setOffset, long long int tag, long long int fullNum);
+int checkAndUpdateCache(Cache *cache, unsigned long long int blockOffset, unsigned long long int setOffset, unsigned long long int tag, unsigned long long int fullNum);
 
 //Function consists of a simple loop that calls checkAndUpdateCache on all addresses
 void insertionLoop(SmrtArr *arr);
 
 //Function does exactly the same thing as bitHash, but for the fully associated cache
 //simulation that is run after the main simulation
-long long int *secondaryBitHash(long long int currentElem, Cache *assocCache);
+unsigned long long int *secondaryBitHash(unsigned long long int currentElem, Cache *assocCache);
 
 //Function accomplishes the same thing as insertionLoop, but for the fully associated
 //cache simulation that is run after the main simulation
