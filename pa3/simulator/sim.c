@@ -9,6 +9,9 @@
 
 int intArgs[8];
 int l1Misses, l2Misses, l3Misses;
+int l1ColdMisses, l2ColdMisses, l3ColdMisses;
+int l1CapacityMisses, l1ConflictMisses;
+int assocCacheMisses;
 int l1Hits, l2Hits, l3Hits;
 int memAccesses;
 char *replaceAlg;
@@ -145,7 +148,7 @@ int validateParameters(char **argv) {
         intArgs[5] = assoc;
     }
     if((intArgs[0] < intArgs[1] * intArgs[7]) || (intArgs[2] < intArgs[3] * intArgs[7]) || (intArgs[4] < intArgs[5] * intArgs[7])) {
-        printf("ERROR: Check those numbers\n");
+        printf("ERROR: Check those numbers, they don't make sense\n");
         error = 1;
     }
     if(!error) {
@@ -243,6 +246,8 @@ int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int s
         l2Misses++;
     } else if(cache->type == 3) {
         l3Misses++;
+    } else if(cache->type == 4) {
+        assocCacheMisses++;
     }
     if(validCount == currSet->numLines) {
         //data needs to be evicted
@@ -271,6 +276,13 @@ int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int s
         updateLines(lines, currSet->numLines, index, 1);
     } else {
         //need to insert at an unused location
+        if(cache->type == 1) {
+            l1ColdMisses++;
+        } else if(cache->type == 2) {
+            l2ColdMisses++;
+        } else if(cache->type == 3) {
+            l3ColdMisses++;
+        }
         for(i = 0; i < currSet->numLines; i++) {
             Line *currLine = lines[i];
             if(!currLine->validBit) {
@@ -309,6 +321,24 @@ void insertionLoop(SmrtArr *arr) {
     }
 }
 
+long long int *secondaryBitHash(long long int currentElem, Cache *assocCache) {
+    long long int *hashes = malloc(sizeof(long long int) * 3);
+    int assocBlockBits = whatPowerOfTwo(assocCache->blockSize);
+    int assocSetBits = whatPowerOfTwo(assocCache->numSets);
+    hashes[0] = (currentElem) & ~(~0 << (assocBlockBits));
+    hashes[1] = (currentElem >> (assocBlockBits)) & ~(~0 << (assocSetBits));
+    hashes[2] = (currentElem >> (assocBlockBits + assocSetBits));
+    return hashes;
+}
+
+void secondaryInsertionLoop(Cache *assocCache, SmrtArr *arr) {
+    int i;
+    for(i = 0; i < arr->elemsHeld; i++) {
+        long long int *hashes = secondaryBitHash(arr->contents[i], assocCache);
+        checkAndUpdateCache(assocCache, hashes[0], hashes[1], hashes[2], arr->contents[i]);
+    }
+}
+
 int main(int argc, char **argv) {
     if(argc == 2) {
         if(strcmp("-h", argv[1]) == 0) {
@@ -321,6 +351,9 @@ int main(int argc, char **argv) {
             FILE *file = fopen(traceFile, "r");
             if(file) {
                 l1Misses = 0;
+                l1ColdMisses = 0;
+                l1CapacityMisses = 0;
+                l1ConflictMisses = 0;
                 l2Misses = 0;
                 l3Misses = 0;
                 l1Hits = 0;
@@ -342,13 +375,26 @@ int main(int argc, char **argv) {
                 numSets = size / (assoc * blockSize);
                 l3Cache = createCache(3, size, assoc, blockSize, numSets);
                 insertionLoop(lines);
+                if(l1Cache->numSets != 1) {
+                    int numLines = l1Cache->size / l1Cache->blockSize;
+                    assocCacheMisses = 0;
+                    Cache *assocCache = createCache(4, l1Cache->size, numLines, l1Cache->blockSize, 1);
+                    secondaryInsertionLoop(assocCache, lines);
+                    l1ConflictMisses = l1Misses - assocCacheMisses;
+                    l1CapacityMisses = assocCacheMisses - l1ColdMisses;
+                }
                 printf("Memory Accesses: %d\n", memAccesses);
                 printf("L1 Cache Hits: %d\n" ,l1Hits);
                 printf("L1 Cache Miss: %d\n", l1Misses);
                 printf("L2 Cache Hits: %d\n", l2Hits);
                 printf("L2 Cache Miss: %d\n", l2Misses);
                 printf("L3 Cache Hits: %d\n", l3Hits);
-                printf("L3 Cache Hits: %d\n", l3Misses);
+                printf("L3 Cache Miss: %d\n", l3Misses);
+                printf("L1 Cold Misses: %d\n", l1ColdMisses);
+                printf("L2 Cold Misses: %d\n", l2ColdMisses);
+                printf("L3 Cold Misses: %d\n", l3ColdMisses);
+                printf("L1 Conflict Misses: %d\n", l1ConflictMisses);
+                printf("L1 Capacity Misses: %d\n", l1CapacityMisses);
             } else {
                 printf("ERROR: File does not exist\n");
             }
