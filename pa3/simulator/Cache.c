@@ -5,6 +5,8 @@ Line *createLine() {
     Line *line = malloc(sizeof(Line));
     line->validBit = 0;
     line->tag = 0;
+    line->insertionAge = 0;
+    line->usageAge = 0;
     return line;
 }
 
@@ -31,8 +33,9 @@ void destroySet(Set *set) {
     free(set);
 }
 
-Cache *createCache(int size, int association, int blockSize, int numSets) {
+Cache *createCache(int type, int size, int association, int blockSize, int numSets) {
     Cache *cache = malloc(sizeof(Cache));
+    cache->type = type;
     cache->size = size;
     cache->association = association;
     cache->blockSize = blockSize;

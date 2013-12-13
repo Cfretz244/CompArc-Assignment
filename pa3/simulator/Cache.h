@@ -1,6 +1,8 @@
 typedef struct Line {
+    int insertionAge;
+    int usageAge;
     int validBit;
-    int tag;
+    long long int tag;
 } Line;
 
 typedef struct Set {
@@ -9,6 +11,7 @@ typedef struct Set {
 } Set;
 
 typedef struct Cache {
+    int type;
     int size;
     int association;
     int blockSize;
@@ -17,7 +20,7 @@ typedef struct Cache {
 } Cache;
 
 //Creates a cache struct and initializes it with numOfSets sets
-Cache *createCache(int size, int association, int blockSize, int numSets);
+Cache *createCache(int type, int size, int association, int blockSize, int numSets);
 
 //Frees a cache struct
 void destroyCache(Cache *cache);
