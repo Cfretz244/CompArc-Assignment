@@ -290,6 +290,7 @@ int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int s
 
 void insertionLoop(SmrtArr *arr) {
     int i;
+    memAccesses = arr->elemsHeld;
     for(i = 0; i < arr->elemsHeld; i++) {
         int hit = 0;
         long long int *hashes = bitHash(arr->contents[i]);
@@ -302,8 +303,6 @@ void insertionLoop(SmrtArr *arr) {
         } else if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
             l3Hits++;
             hit = 1;
-        } else {
-            memAccesses++;
         }
     }
 }
