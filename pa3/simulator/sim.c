@@ -296,16 +296,13 @@ void insertionLoop(SmrtArr *arr) {
         if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2], arr->contents[i])) {
             l1Hits++;
             hit = 1;
-        }
-        if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5], arr->contents[i])) {
+        } else if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5], arr->contents[i])) {
             l2Hits++;
             hit = 1;
-        }
-        if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
+        } else if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
             l3Hits++;
             hit = 1;
-        }
-        if(!hit) {
+        } else {
             memAccesses++;
         }
     }
