@@ -227,7 +227,11 @@ int checkAndUpdateCache(Cache *cache, unsigned long long int blockOffset, unsign
             validCount++;
             if(currLine->tag == tag) {
                 //We have a hit
+                if(cache->type != 1) {
+                    printf("yup\n");
+                }
                 currLine->usageAge = 0;
+                updateLines(lines, currSet->numLines, i, 0);
                 return 1;
             }
         }
