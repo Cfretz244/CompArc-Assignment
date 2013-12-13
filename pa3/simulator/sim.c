@@ -3,7 +3,6 @@
 #include <string.h>
 #include <limits.h>
 #include "sim.h"
-#include "Cache.h"
 
 #define startingLineLength 8
 
@@ -29,15 +28,6 @@ int whatPowerOfTwo(int check) {
     int i;
     for(i = 0; check % 2 == 0; i++) {
         check /= 2;
-    }
-    return i;
-}
-
-int nextPowerOfTwo(long long int check) {
-    int i;
-    long long int powers = 1;
-    for(i = 0; check > powers; i++) {
-        powers *= 2;
     }
     return i;
 }
@@ -339,10 +329,14 @@ void secondaryInsertionLoop(Cache *assocCache, SmrtArr *arr) {
     }
 }
 
+void printHelpStuff() {
+    printf("Usage: -l1size <l1size> -l1assoc <direct|assoc|assoc:n> -l2size <l2size> -l2assoc <direct|assoc|assoc:n> -l3size <l3size> -l3assoc <direct|assoc|assoc:n> <blocksize> <replacement algorithm> <trace file>\n");
+}
+
 int main(int argc, char **argv) {
     if(argc == 2) {
         if(strcmp("-h", argv[1]) == 0) {
-            printf("Print help stuff\n");
+            printHelpStuff();
         } else {
             printf("ERROR: Invalid Arguments\n");
         }
@@ -375,6 +369,8 @@ int main(int argc, char **argv) {
                 numSets = size / (assoc * blockSize);
                 l3Cache = createCache(3, size, assoc, blockSize, numSets);
                 insertionLoop(lines);
+                //This line makes me sad
+                //I'd honestly prefer to keep track of the different misses as they happen than to rerun another simulation
                 if(l1Cache->numSets != 1) {
                     int numLines = l1Cache->size / l1Cache->blockSize;
                     assocCacheMisses = 0;
@@ -403,7 +399,7 @@ int main(int argc, char **argv) {
         }
     } else if(argc == 17) {
         if(strcmp("-h", argv[1]) == 0) {
-            printf("Print help stuff\n");
+            printHelpStuff();
         } else {
             printf("ERROR: Invalid Arguments\n");
         }

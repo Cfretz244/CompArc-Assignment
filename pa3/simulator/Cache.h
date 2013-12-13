@@ -1,3 +1,4 @@
+//Struct represents a single line inside of a set, inside of a Cache
 typedef struct Line {
     int insertionAge;
     int usageAge;
@@ -5,11 +6,13 @@ typedef struct Line {
     long long int tag;
 } Line;
 
+//Struct represents a single set inside of a Cache
 typedef struct Set {
     int numLines;
     Line **lines;
 } Set;
 
+//Struct represents a complete cache, and all pertinent info
 typedef struct Cache {
     int type;
     int size;
