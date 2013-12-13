@@ -8,7 +8,7 @@
 #define startingLineLength 8
 
 int intArgs[8];
-int coldMiss, conflictMiss, capacityMiss;
+int l1Misses, l2Misses, l3Misses;
 int l1Hits, l2Hits, l3Hits;
 char *replaceAlg;
 char *traceFile;
@@ -217,7 +217,7 @@ void updateLines(Line **lines, int lineCount, int index, int wasInserted) {
     }
 }
 
-int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int setOffset, long long int tag) {
+int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int setOffset, long long int tag, long long int fullNum) {
     Set *currSet = cache->storage[setOffset];
     Line **lines = currSet->lines;
     int i, validCount = 0;
@@ -228,16 +228,16 @@ int checkAndUpdateCache(Cache *cache, long long int blockOffset, long long int s
             if(currLine->tag == tag) {
                 //We have a hit
                 currLine->usageAge = 0;
-                if(cache->type == 1) {
-                    l1Hits++;
-                } else if(cache->type == 2) {
-                    l2Hits++;
-                } else if(cache->type == 3) {
-                    l3Hits++;
-                }
                 return 1;
             }
         }
+    }
+    if(cache->type == 1) {
+        l1Misses++;
+    } else if(cache->type == 2) {
+        l2Misses++;
+    } else if(cache->type == 3) {
+        l3Misses++;
     }
     if(validCount == currSet->numLines) {
         //data needs to be evicted
@@ -285,14 +285,14 @@ void insertionLoop(SmrtArr *arr) {
     int i;
     for(i = 0; i < arr->elemsHeld; i++) {
         long long int *hashes = bitHash(arr->contents[i]);
-        if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2])) {
-            //l1Cache hit
-        } else if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5])) {
-            //l2Cache hit
-        } else if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8])) {
-            //l3Cache hit
-        } else {
-            //complete miss
+        if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2], arr->contents[i])) {
+            l1Hits++;
+        }
+        if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5], arr->contents[i])) {
+            l2Hits++;
+        }
+        if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
+            l3Hits++;
         }
     }
 }
@@ -306,29 +306,35 @@ int main(int argc, char **argv) {
         }
     } else if(argc == 16) {
         if(validateParameters(argv)) {
-            coldMiss = 0;
-            capacityMiss = 0;
-            conflictMiss = 0;
             FILE *file = fopen(traceFile, "r");
             if(file) {
+                l1Misses = 0;
+                l2Misses = 0;
+                l3Misses = 0;
+                l1Hits = 0;
+                l2Hits = 0;
+                l3Hits = 0;
                 SmrtArr *lines = getLines(file);
                 int size = intArgs[0];
                 int assoc = intArgs[1];
                 int blockSize = intArgs[7];
                 int numSets = size / (assoc * blockSize);
                 l1Cache = createCache(1, size, assoc, blockSize, numSets);
-                printf("L1 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l1Cache->size, l1Cache->numSets, l1Cache->blockSize);
+                printf("L1 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l1Cache->size, l1Cache->numSets, l1Cache->storage[0]->numLines, l1Cache->blockSize);
                 size = intArgs[2];
                 assoc = intArgs[3];
                 numSets = size / (assoc * blockSize);
                 l2Cache = createCache(2, size, assoc, blockSize, numSets);
-                printf("L2 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l2Cache->size, l2Cache->numSets, l2Cache->blockSize);
+                printf("L2 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l2Cache->size, l2Cache->numSets, l2Cache->storage[0]->numLines, l2Cache->blockSize);
                 size = intArgs[4];
                 assoc = intArgs[5];
                 numSets = size / (assoc * blockSize);
                 l3Cache = createCache(3, size, assoc, blockSize, numSets);
-                printf("L3 Cache created with %d bytes of memory, %d sets, and a blocksize of %d.\n", l3Cache->size, l3Cache->numSets, l3Cache->blockSize);
+                printf("L3 Cache created with %d bytes of memory, %d sets of %d lines each, and a blocksize of %d.\n", l3Cache->size, l3Cache->numSets, l3Cache->storage[0]->numLines, l3Cache->blockSize);
                 insertionLoop(lines);
+                printf("There were %d L1 hits and %d L1 misses for a percentage of %f\n", l1Hits, l1Misses, (((l1Hits) / (l1Hits + (float)l1Misses)) * 100));
+                printf("There were %d L2 hits and %d L2 misses for a percentage of %f\n", l2Hits, l2Misses, (((l2Hits) / (l2Hits + (float)l2Misses)) * 100));
+                printf("There were %d L3 hits and %d L3 misses for a percentage of %f\n", l3Hits, l3Misses, (((l3Hits) / (l3Hits + (float)l3Misses)) * 100));
             } else {
                 printf("ERROR: File does not exist\n");
             }
