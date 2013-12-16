@@ -42,7 +42,7 @@ int validateParameters(char **argv) {
             if(strtol(argv[i + 1], NULL, 10)) {
                 intArgs[0] = atoi(argv[i + 1]);
             } else {
-                printf("ERROR: Invalid L1 Size\n");
+                fprintf(stderr, "ERROR: Invalid L1 Size\n");
                 error = 1;
             }
             i++;
@@ -55,7 +55,7 @@ int validateParameters(char **argv) {
             } else if(strstr(nextStr, "assoc:") != NULL) {
                 intArgs[1] = atoi(&nextStr[6]);
             } else {
-                printf("ERROR: Invalid L1 Association Type\n");
+                fprintf(stderr, "ERROR: Invalid L1 Association Type\n");
                 error = 1;
             }
             i++;
@@ -63,7 +63,7 @@ int validateParameters(char **argv) {
             if(strtol(argv[i + 1], NULL, 10)) {
                 intArgs[2] = atoi(argv[i + 1]);
             } else {
-                printf("ERROR: Invalid L2 Size\n");
+                fprintf(stderr, "ERROR: Invalid L2 Size\n");
                 error = 1;
             }
             i++;
@@ -76,7 +76,7 @@ int validateParameters(char **argv) {
             } else if(strstr(nextStr, "assoc:") != NULL) {
                 intArgs[3] = atoi(&nextStr[6]);
             } else {
-                printf("ERROR: Invalid L2 Association Type\n");
+                fprintf(stderr, "ERROR: Invalid L2 Association Type\n");
                 error = 1;
             }
             i++;
@@ -84,7 +84,7 @@ int validateParameters(char **argv) {
             if(strtol(argv[i + 1], NULL, 10)) {
                 intArgs[4] = atoi(argv[i + 1]);
             } else {
-                printf("ERROR: Invalid L3 Size\n");
+                fprintf(stderr, "ERROR: Invalid L3 Size\n");
                 error = 1;
             }
             i++;
@@ -97,7 +97,7 @@ int validateParameters(char **argv) {
             } else if(strstr(nextStr, "assoc:") != NULL) {
                 intArgs[5] = atoi(&nextStr[6]);
             } else {
-                printf("ERROR: Invalid L3 Association Type\n");
+                fprintf(stderr, "ERROR: Invalid L3 Association Type\n");
                 error = 1;
             }
             i++;
@@ -110,13 +110,13 @@ int validateParameters(char **argv) {
                 traceFile = currentStr;
                 shouldAbsorb = 0;
             } else {
-                printf("ERROR: Invalid Parameters\n");
+                fprintf(stderr, "ERROR: Invalid Parameters\n");
                 error = 1;
             }
         }
     }
     if(!isPowerOfTwo(intArgs[0]) || !isPowerOfTwo(intArgs[2]) || !isPowerOfTwo(intArgs[4]) || !isPowerOfTwo(intArgs[7]) ) {
-        printf("ERROR: Numbers must be powers of two\n");
+        fprintf(stderr, "ERROR: Numbers must be powers of two\n");
         error = 1;
     }
     if(intArgs[1] == 0) {
@@ -138,7 +138,7 @@ int validateParameters(char **argv) {
         intArgs[5] = assoc;
     }
     if((intArgs[0] < intArgs[1] * intArgs[7]) || (intArgs[2] < intArgs[3] * intArgs[7]) || (intArgs[4] < intArgs[5] * intArgs[7])) {
-        printf("ERROR: Check those numbers, they don't make sense\n");
+        fprintf(stderr, "ERROR: Check those numbers, they don't make sense\n");
         error = 1;
     }
     if(!error) {
@@ -331,7 +331,7 @@ int main(int argc, char **argv) {
         if(strcmp("-h", argv[1]) == 0) {
             printHelpStuff();
         } else {
-            printf("ERROR: Invalid Arguments\n");
+            fprintf(stderr, "ERROR: Invalid Arguments\n");
         }
     } else if(argc == 16) {
         if(validateParameters(argv)) {
@@ -385,7 +385,7 @@ int main(int argc, char **argv) {
                 printf("L1 Conflict Misses: %d\n", l1ConflictMisses);
                 printf("L1 Capacity Misses: %d\n", l1CapacityMisses);
             } else {
-                printf("ERROR: File does not exist\n");
+                fprintf(stderr, "ERROR: File does not exist\n");
             }
         } else {
             return 1;
@@ -394,10 +394,10 @@ int main(int argc, char **argv) {
         if(strcmp("-h", argv[1]) == 0) {
             printHelpStuff();
         } else {
-            printf("ERROR: Invalid Arguments\n");
+            fprintf(stderr, "ERROR: Invalid Arguments\n");
         }
     } else {
-        printf("ERROR: Invalid number of arguments\n");
+        fprintf(stderr, "ERROR: Invalid number of arguments\n");
     }
     return 0;
 }
