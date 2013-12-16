@@ -177,8 +177,6 @@ SmrtArr *getLines(FILE *file) {
         }
         if(currentLine > 0 && validData) {
             insertElement(allLines, currentLine);
-        } else {
-            printf("We have a problem\n");
         }
     }
     return allLines;
@@ -295,17 +293,13 @@ void insertionLoop(SmrtArr *arr) {
     int i;
     memAccesses = arr->elemsHeld;
     for(i = 0; i < arr->elemsHeld; i++) {
-        int hit = 0;
         unsigned long long int *hashes = bitHash(arr->contents[i]);
         if(checkAndUpdateCache(l1Cache, hashes[0], hashes[1], hashes[2], arr->contents[i])) {
             l1Hits++;
-            hit = 1;
         } else if(checkAndUpdateCache(l2Cache, hashes[3], hashes[4], hashes[5], arr->contents[i])) {
             l2Hits++;
-            hit = 1;
         } else if(checkAndUpdateCache(l3Cache, hashes[6], hashes[7], hashes[8], arr->contents[i])) {
             l3Hits++;
-            hit = 1;
         }
     }
 }
